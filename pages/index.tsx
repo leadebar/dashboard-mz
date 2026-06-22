@@ -99,6 +99,9 @@ const F="'Gotham','Inter',sans-serif"
 const FE="'Eurostile','Inter',sans-serif"
 
 export default function MZHub() {
+  const [auth, setAuth] = useState(false)
+  const [pwd, setPwd] = useState('')
+  const [pwdErr, setPwdErr] = useState(false)
   const [view,setView]=useState<View>('dashboard')
   const [ae,setAe]=useState<EId|null>(null)
   const [hist,setHist]=useState<Record<EId,Msg[]>>({seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]})
@@ -176,6 +179,38 @@ export default function MZHub() {
 
   const openE=(id:EId)=>{setAe(id);setView('chat');setTimeout(()=>iRef.current?.focus(),150)}
   const tog=(id:string)=>setTasks(p=>p.map(t=>t.id===id?{...t,done:!t.done}:t))
+
+  if (!auth) return (
+    <>
+      <Head>
+        <title>MZ Hub — Accès restreint</title>
+        <style dangerouslySetInnerHTML={{__html: FCSS}} />
+      </Head>
+      <div style={{display:'flex',height:'100vh',alignItems:'center',justifyContent:'center',background:'#1A1A1A',fontFamily:"'Gotham','Inter',sans-serif"}}>
+        <div style={{background:'#fff',borderRadius:4,padding:'40px 48px',width:380,boxShadow:'0 8px 40px rgba(0,0,0,0.3)',textAlign:'center'}}>
+          <img src={LOGO} alt="MZ" style={{width:56,height:56,borderRadius:4,margin:'0 auto 20px',display:'block'}} />
+          <div style={{fontFamily:"'Eurostile','Inter',sans-serif",fontSize:13,color:'#C8102E',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:4}}>MICHAËL ZINGRAF</div>
+          <div style={{fontFamily:"'Gotham','Inter',sans-serif",fontSize:10,color:'#999',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:28}}>Hub Marketing — Accès restreint</div>
+          <input
+            type="password"
+            value={pwd}
+            onChange={e => { setPwd(e.target.value); setPwdErr(false) }}
+            onKeyDown={e => { if (e.key === 'Enter') { if (pwd === 'MZHub2026!') { setAuth(true) } else { setPwdErr(true) } } }}
+            placeholder="Mot de passe"
+            style={{width:'100%',padding:'11px 14px',fontSize:13,fontFamily:"'Gotham','Inter',sans-serif",border:'1px solid '+(pwdErr?'#C8102E':'#DCDCDC'),borderRadius:3,color:'#1A1A1A',outline:'none',marginBottom:10,boxSizing:'border-box' as const}}
+            autoFocus
+          />
+          {pwdErr && <div style={{fontSize:12,color:'#C8102E',marginBottom:10,fontFamily:"'Gotham','Inter',sans-serif"}}>Mot de passe incorrect</div>}
+          <button
+            onClick={() => { if (pwd === 'MZHub2026!') { setAuth(true) } else { setPwdErr(true) } }}
+            style={{width:'100%',padding:'11px',fontSize:12,fontWeight:500,background:'#C8102E',color:'#fff',border:'none',borderRadius:3,cursor:'pointer',fontFamily:"'Eurostile','Inter',sans-serif",letterSpacing:'0.08em',textTransform:'uppercase'}}>
+            Accéder
+          </button>
+          <div style={{marginTop:20,fontSize:10,color:'#CCCCCC',fontFamily:"'Gotham','Inter',sans-serif"}}>Réservé à l&apos;équipe Michaël Zingraf</div>
+        </div>
+      </div>
+    </>
+  )
 
   return (
     <>
