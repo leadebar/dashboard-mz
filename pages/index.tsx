@@ -30,14 +30,14 @@ const PROJ: Record<string,{color:string;bg:string;border:string}> = {
 }
 
 const EX: Record<EId,{name:string;title:string;color:string;bg:string;initials:string}> = {
-  seo:        { name: 'Clara',     title: 'SEO & Référencement',       color: '#1B5E20', bg: '#E8F5E9', initials: 'CL' },
-  blog:       { name: 'Sophie',    title: 'Rédaction & SEO Blog',      color: '#0D47A1', bg: '#E3F2FD', initials: 'SO' },
-  newsletter: { name: 'Emma',      title: 'Newsletter Mailchimp',       color: '#4A148C', bg: '#F3E5F5', initials: 'EM' },
-  agenda:     { name: 'Julie',     title: 'Agenda & Planning',          color: RED,       bg: '#FFF0F2', initials: 'JU' },
-  mails:      { name: 'Camille',   title: 'Rédaction Mails',           color: '#BF360C', bg: '#FBE9E7', initials: 'CA' },
-  ppt:        { name: 'Léonie',    title: 'Présentations PPT & Canva', color: '#6A1B9A', bg: '#F3E5F5', initials: 'LÉ' },
-  data:       { name: 'Iris',      title: 'Analyse & Data',            color: '#01579B', bg: '#E1F5FE', initials: 'IR' },
-  strategie:  { name: 'Alexandra', title: 'Stratégie Marketing',       color: DARK,      bg: GREY,     initials: 'AL' },
+  seo:        { name: 'Ashley',     title: 'SEO & Référencement',       color: '#1B5E20', bg: '#E8F5E9', initials: 'CL' },
+  blog:       { name: 'Lauren',    title: 'Rédaction & SEO Blog',      color: '#0D47A1', bg: '#E3F2FD', initials: 'SO' },
+  newsletter: { name: 'Madison',      title: 'Newsletter Mailchimp',       color: '#4A148C', bg: '#F3E5F5', initials: 'EM' },
+  agenda:     { name: 'Taylor',     title: 'Agenda & Planning',          color: RED,       bg: '#FFF0F2', initials: 'JU' },
+  mails:      { name: 'Olivia',   title: 'Rédaction Mails',           color: '#BF360C', bg: '#FBE9E7', initials: 'CA' },
+  ppt:        { name: 'Sophia',    title: 'Présentations PPT & Canva', color: '#6A1B9A', bg: '#F3E5F5', initials: 'LÉ' },
+  data:       { name: 'Brooklyn',      title: 'Analyse & Data',            color: '#01579B', bg: '#E1F5FE', initials: 'IR' },
+  strategie:  { name: 'Victoria', title: 'Stratégie Marketing',       color: DARK,      bg: GREY,     initials: 'AL' },
 }
 
 const MZ_CTX: Record<EId, string> = {
@@ -51,7 +51,7 @@ const MZ_CTX: Record<EId, string> = {
   strategie: "Tu travailles pour Lea Debar, Chargee Marketing Digital chez Michael Zingraf Real Estate (Christie's International Real Estate), agence immobilier de luxe Riviera et Provence, 14 agences.\nProjets : MZ Real Estate (vente prestige), MZ Rentals (location luxe), Newsletters (80k contacts Mailchimp).\nOutils : Mailchimp, Apimo, Google Analytics, portails SeLoger Prestige / Belles Demeures / JamesEdition.\nRegles : reponds en francais naturel, ZERO markdown (pas de **, ##, |---|). Si tu identifies des taches/dates, ajoute a la fin : {\"tasks\":[{\"text\":\"X\",\"proj\":\"MZ Real Estate\",\"deadline\":\"2026-06-25\",\"who\":\"lea\"}],\"dates\":[{\"d\":\"2026-06-25\",\"t\":\"titre\",\"proj\":\"Newsletters\",\"type\":\"newsletter\"}]} sinon rien.\n\nTu es ALEXANDRA, Directrice Strategie Marketing luxe. Tu produis : analyses strategiques, plans d'action priorises, recommandations positionnement digital MZ.",
 }
 
-const BRIEF_P = "Tu travailles pour Lea Debar, Chargee Marketing Digital chez Michael Zingraf Real Estate (Christie's International Real Estate), agence immobilier de luxe Riviera et Provence, 14 agences.\nProjets : MZ Real Estate (vente prestige), MZ Rentals (location luxe), Newsletters (80k contacts Mailchimp).\nOutils : Mailchimp, Apimo, Google Analytics, portails SeLoger Prestige / Belles Demeures / JamesEdition.\nRegles : reponds en francais naturel, ZERO markdown (pas de **, ##, |---|). Si tu identifies des taches/dates, ajoute a la fin : {\"tasks\":[{\"text\":\"X\",\"proj\":\"MZ Real Estate\",\"deadline\":\"2026-06-25\",\"who\":\"lea\"}],\"dates\":[{\"d\":\"2026-06-25\",\"t\":\"titre\",\"proj\":\"Newsletters\",\"type\":\"newsletter\"}]} sinon rien.\n\nTu coordonnes Clara (SEO), Sophie (Blog), Emma (Newsletter), Julie (Agenda), Camille (Mails), Leonie (PPT), Iris (Data), Alexandra (Strategie). Format : Clara : [2-3 phrases]\\n\\nSophie : [2-3 phrases]... ZERO markdown, uniquement ces 8 prenoms."
+const BRIEF_P = "Tu travailles pour Lea Debar, Chargee Marketing Digital chez Michael Zingraf Real Estate (Christie's International Real Estate), agence immobilier de luxe Riviera et Provence, 14 agences.\nProjets : MZ Real Estate (vente prestige), MZ Rentals (location luxe), Newsletters (80k contacts Mailchimp).\nOutils : Mailchimp, Apimo, Google Analytics, portails SeLoger Prestige / Belles Demeures / JamesEdition.\nRegles : reponds en francais naturel, ZERO markdown (pas de **, ##, |---|). Si tu identifies des taches/dates, ajoute a la fin : {\"tasks\":[{\"text\":\"X\",\"proj\":\"MZ Real Estate\",\"deadline\":\"2026-06-25\",\"who\":\"lea\"}],\"dates\":[{\"d\":\"2026-06-25\",\"t\":\"titre\",\"proj\":\"Newsletters\",\"type\":\"newsletter\"}]} sinon rien.\n\nTu coordonnes Ashley (SEO), Lauren (Blog), Madison (Newsletter), Taylor (Agenda), Olivia (Mails), Leonie (PPT), Brooklyn (Data), Victoria (Strategie). Format : Ashley : [2-3 phrases]\\n\\nLauren : [2-3 phrases]... ZERO markdown, uniquement ces 8 prenoms."
 
 function parseMsg(raw: string): { text: string; tasks: Task[]; dates: CalDate[] } {
   let text = raw, tasks: Task[] = [], dates: CalDate[] = []
@@ -350,7 +350,7 @@ export default function MZHub() {
                   <div style={C({padding:'11px 16px',borderBottom:'1px solid '+BORDER,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between'})}>
                     <div>
                       <div style={C({fontSize:12,fontWeight:500,color:DARK,fontFamily:F})}>Briefing équipe</div>
-                      <div style={C({fontSize:10,color:TEXT3,fontFamily:F})}>Clara · Sophie · Emma · Julie · Camille · Léonie · Iris · Alexandra</div>
+                      <div style={C({fontSize:10,color:TEXT3,fontFamily:F})}>Ashley · Lauren · Madison · Taylor · Olivia · Sophia · Brooklyn · Victoria</div>
                     </div>
                     {bmsgs.length>0&&<button onClick={()=>setBmsgs([])} style={C({padding:'3px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,color:TEXT3,cursor:'pointer',fontFamily:F})}>Effacer</button>}
                   </div>
