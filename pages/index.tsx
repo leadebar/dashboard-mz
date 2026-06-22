@@ -141,8 +141,8 @@ async function extractText(file: File): Promise<string> {
   return '[Fichier ' + file.name + ' — ' + (file.size / 1024).toFixed(0) + ' KB. Analyse non disponible pour ce format, merci de décrire son contenu.]'
 }
 
-function buildMessages(msgs: Msg[], fileContent?: string, userText?: string): {role:string;content:unknown}[] {
-  const result = msgs.slice(0, -1).map(m => ({role: m.role, content: m.content}))
+function buildMessages(msgs: Msg[], fileContent?: string, userText?: string): {role:string;content:string | {type:string;[key:string]:unknown}[]}[] {
+  const result: {role:string;content:string | {type:string;[key:string]:unknown}[]}[] = msgs.slice(0, -1).map(m => ({role: m.role, content: m.content as string}))
   
   if (!fileContent) {
     result.push({role: 'user', content: userText || ''})
