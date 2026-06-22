@@ -244,7 +244,7 @@ export default function MZHub() {
         <main style={C({flex:1,display:'flex',flexDirection:'column',overflow:'hidden'})}>
           <div style={C({height:52,background:WHITE,borderBottom:'1px solid '+BORDER,display:'flex',alignItems:'center',padding:'0 24px',gap:14,flexShrink:0,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'})}>
             <div style={C({fontFamily:FE,fontSize:13,color:DARK,flex:1,letterSpacing:'0.06em',textTransform:'uppercase'})}>
-              {ae?EX[ae].name+' — '+EX[ae].title:view==='dashboard'?'Vue d\'ensemble':view==='chat'?'Mon équipe':view==='todo'?'Tâches & Projets':'Calendrier'}
+              {ae ? EX[ae].name + " — " + EX[ae].title : view === "dashboard" ? "Vue d'ensemble" : view === "chat" ? "Mon équipe" : view === "todo" ? "Tâches" : "Calendrier"}
             </div>
             <div style={C({fontSize:11,color:TEXT3,fontVariantNumeric:'tabular-nums'})}>{time}</div>
             {ae&&<button onClick={()=>setHist(h=>({...h,[ae]:[]}))} style={C({padding:'4px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,color:TEXT3,cursor:'pointer',fontFamily:F})}>Effacer</button>}
