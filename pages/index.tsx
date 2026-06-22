@@ -93,6 +93,89 @@ function tc(type:string) {
   if(type==='rdv') return {bg:'#E3F2FD',color:'#0D47A1',border:'#90CAF9'}
   return {bg:'#FFF3E0',color:'#E65100',border:'#FFCC80'}
 }
+async function extractText(file: File): Promise<string> {
+  const name = file.name.toLowerCase()
+  
+  // Plain text files
+  if (name.endsWith('.txt') || name.endsWith('.md') || name.endsWith('.csv') || name.endsWith('.html')) {
+    return await file.text()
+  }
+  
+  // JSON
+  if (name.endsWith('.json')) {
+    const t = await file.text()
+    try { return JSON.stringify(JSON.parse(t), null, 2) } catch { return t }
+  }
+  
+  // PDF — use base64 + send to Claude vision
+  if (name.endsWith('.pdf')) {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const b64 = (e.target?.result as string).split(',')[1]
+        resolve('__PDF_BASE64__:' + b64 + ':__END_PDF__')
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+  
+  // Images
+  if (name.match(/\.(png|jpg|jpeg|gif|webp)$/)) {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const b64 = (e.target?.result as string).split(',')[1]
+        const mime = file.type || 'image/jpeg'
+        resolve('__IMG_BASE64__:' + mime + ':' + b64 + ':__END_IMG__')
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+  
+  // Excel / Word / other — read as text best effort
+  try {
+    const t = await file.text()
+    if (t && t.length > 10) return t.slice(0, 8000)
+  } catch {}
+  
+  return '[Fichier ' + file.name + ' — ' + (file.size / 1024).toFixed(0) + ' KB. Analyse non disponible pour ce format, merci de décrire son contenu.]'
+}
+
+function buildMessages(msgs: Msg[], fileContent?: string, userText?: string): {role:string;content:unknown}[] {
+  const result = msgs.slice(0, -1).map(m => ({role: m.role, content: m.content}))
+  
+  if (!fileContent) {
+    result.push({role: 'user', content: userText || ''})
+    return result
+  }
+  
+  // PDF
+  if (fileContent.startsWith('__PDF_BASE64__:')) {
+    const b64 = fileContent.replace('__PDF_BASE64__:', '').replace(':__END_PDF__', '')
+    result.push({role: 'user', content: [
+      {type: 'document', source: {type: 'base64', media_type: 'application/pdf', data: b64}},
+      {type: 'text', text: userText || 'Analyse ce document.'}
+    ]})
+    return result
+  }
+  
+  // Image
+  if (fileContent.startsWith('__IMG_BASE64__:')) {
+    const parts = fileContent.replace('__IMG_BASE64__:', '').replace(':__END_IMG__', '').split(':')
+    const mime = parts[0]
+    const b64 = parts.slice(1).join(':')
+    result.push({role: 'user', content: [
+      {type: 'image', source: {type: 'base64', media_type: mime, data: b64}},
+      {type: 'text', text: userText || 'Analyse cette image.'}
+    ]})
+    return result
+  }
+  
+  // Text content
+  result.push({role: 'user', content: userText + '\n\n--- CONTENU DU FICHIER ---\n' + fileContent.slice(0, 6000)})
+  return result
+}
+
 
 const C=(x:React.CSSProperties)=>x
 const F="'Gotham','Inter',sans-serif"
@@ -106,6 +189,9 @@ export default function MZHub() {
   const [ae,setAe]=useState<EId|null>(null)
   const [hist,setHist]=useState<Record<EId,Msg[]>>({seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]})
   const [inp,setInp]=useState('')
+  const [file,setFile]=useState<File|null>(null)
+  const [fileLoading,setFileLoading]=useState(false)
+  const fileRef=useRef<HTMLInputElement>(null)
   const [load,setLoad]=useState(false)
   const [bt,setBt]=useState('')
   const [bmsgs,setBmsgs]=useState<{role:'user'|'assistant';content:string;ts:string}[]>([])
@@ -135,12 +221,24 @@ export default function MZHub() {
   },[])
 
   const send=useCallback(async(ov?:string)=>{
-    const txt=ov||inp; if(!txt.trim()||!ae||load) return
+    const txt=ov||inp; if((!txt.trim()&&!file)||!ae||load) return
     const ts=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
-    const up=[...hist[ae],{role:'user' as const,content:txt,ts}]
+    const displayText = txt + (file ? ' 📎 ' + file.name : '')
+    const up=[...hist[ae],{role:'user' as const,content:displayText,ts}]
     setHist(h=>({...h,[ae]:up})); setInp(''); setLoad(true)
+    
+    let fileContent: string | undefined
+    if (file) {
+      setFileLoading(true)
+      fileContent = await extractText(file)
+      setFileLoading(false)
+      setFile(null)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+    
     try {
-      const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:MZ_CTX[ae],messages:up.map(m=>({role:m.role,content:m.content}))})})
+      const messages = buildMessages(up, fileContent, txt || 'Analyse ce document.')
+      const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:MZ_CTX[ae],messages})})
       const d=await r.json()
       const {text:clean,tasks:tks,dates:dts}=parseMsg(d.content||'')
       const rts=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
@@ -152,13 +250,26 @@ export default function MZHub() {
     setLoad(false); setTimeout(()=>iRef.current?.focus(),100)
   },[inp,ae,load,hist,addR])
 
+  const [bfile,setBfile]=useState<File|null>(null)
+  const bfileRef=useRef<HTMLInputElement>(null)
+
   const sendB=useCallback(async()=>{
-    if(!bt.trim()||bl) return
+    if((!bt.trim()&&!bfile)||bl) return
     const ts=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
-    const up=[...bmsgs,{role:'user' as const,content:bt,ts}]
+    const displayBt = bt + (bfile ? ' 📎 ' + bfile.name : '')
+    const up=[...bmsgs,{role:'user' as const,content:displayBt,ts}]
     setBmsgs(up); setBt(''); setBl(true)
+    
+    let bfileContent: string | undefined
+    if (bfile) {
+      bfileContent = await extractText(bfile)
+      setBfile(null)
+      if (bfileRef.current) bfileRef.current.value = ''
+    }
+    
     try {
-      const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:BRIEF_P,messages:up.map(m=>({role:m.role,content:m.content}))})})
+      const bMessages = bfile ? [{role:'user',content: bt + '\n\n--- CONTENU DU FICHIER ---\n' + (bfileContent||'').slice(0,6000)}] : up.map(m=>({role:m.role,content:m.content}))
+      const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:BRIEF_P,messages:bMessages})})
       const d=await r.json()
       const clean=(d.content||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s+/gm,'').replace(/^\s*[-*]\s+/gm,'').trim()
       setBmsgs(p=>[...p,{role:'assistant',content:clean,ts:new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}])
@@ -398,10 +509,18 @@ export default function MZHub() {
                     <div ref={bEnd} />
                   </div>
                   <div style={C({padding:'11px 14px',borderTop:'1px solid '+BORDER,display:'flex',gap:8,flexShrink:0})}>
-                    <input value={bt} onChange={e=>setBt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&sendB()}
-                      placeholder="Une question pour toute l'équipe..."
-                      style={C({flex:1,padding:'9px 14px',fontSize:13,fontFamily:F,background:'#FAFAFA',border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none'})} />
-                    <button onClick={sendB} disabled={bl||!bt.trim()} style={C({padding:'9px 18px',fontSize:11,fontWeight:500,background:bl||!bt.trim()?GREY2:RED,color:bl||!bt.trim()?TEXT3:WHITE,border:'none',borderRadius:3,cursor:bl||!bt.trim()?'not-allowed':'pointer',fontFamily:FE,letterSpacing:'0.06em',textTransform:'uppercase'})}>Envoyer</button>
+                    <div style={C({flex:1,display:'flex',flexDirection:'column',gap:4})}>
+                      {bfile && <div style={C({display:'flex',alignItems:'center',gap:6,padding:'4px 10px',background:'#FFF0F2',border:'1px solid #F5B8C2',borderRadius:3,fontSize:11,color:RED})}>
+                        <span>📎 {bfile.name}</span>
+                        <button onClick={()=>{setBfile(null);if(bfileRef.current)bfileRef.current.value=''}} style={C({background:'none',border:'none',color:RED,cursor:'pointer',fontSize:14,padding:0,marginLeft:'auto'})}>×</button>
+                      </div>}
+                      <input value={bt} onChange={e=>setBt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&sendB()}
+                        placeholder={bfile ? 'Question sur ce fichier (optionnel)…' : "Une question pour toute l'équipe..."}
+                        style={C({flex:1,padding:'9px 14px',fontSize:13,fontFamily:F,background:'#FAFAFA',border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',width:'100%'})} />
+                    </div>
+                    <input ref={bfileRef} type="file" style={C({display:'none'})} onChange={e=>setBfile(e.target.files?.[0]||null)} />
+                    <button onClick={()=>bfileRef.current?.click()} title="Joindre un fichier" style={C({padding:'9px 12px',fontSize:16,background:bfile?'#FFF0F2':GREY,border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:bfile?RED:TEXT3,flexShrink:0})}>📎</button>
+                    <button onClick={sendB} disabled={bl||(!bt.trim()&&!bfile)} style={C({padding:'9px 18px',fontSize:11,fontWeight:500,background:bl||(!bt.trim()&&!bfile)?GREY2:RED,color:bl||(!bt.trim()&&!bfile)?TEXT3:WHITE,border:'none',borderRadius:3,cursor:bl||(!bt.trim()&&!bfile)?'not-allowed':'pointer',fontFamily:FE,letterSpacing:'0.06em',textTransform:'uppercase',flexShrink:0})}>Envoyer</button>
                   </div>
                 </div>
               </div>
@@ -475,10 +594,18 @@ export default function MZHub() {
                     <div ref={chatEnd} />
                   </div>
                   <div style={C({padding:'11px 14px',borderTop:'1px solid '+BORDER,display:'flex',gap:8,background:'#FAFAFA',flexShrink:0})}>
-                    <input ref={iRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}
-                      placeholder={'Message pour '+ex.name+'…'}
-                      style={C({flex:1,padding:'9px 14px',fontSize:13,fontFamily:F,background:WHITE,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none'})} />
-                    <button onClick={()=>send()} disabled={load||!inp.trim()} style={C({padding:'9px 18px',fontSize:11,fontWeight:500,background:load||!inp.trim()?GREY2:RED,color:load||!inp.trim()?TEXT3:WHITE,border:'none',borderRadius:3,cursor:load||!inp.trim()?'not-allowed':'pointer',fontFamily:FE,letterSpacing:'0.06em',textTransform:'uppercase'})}>Envoyer</button>
+                    <div style={C({flex:1,display:'flex',flexDirection:'column',gap:4})}>
+                      {file && <div style={C({display:'flex',alignItems:'center',gap:6,padding:'4px 10px',background:'#FFF0F2',border:'1px solid #F5B8C2',borderRadius:3,fontSize:11,color:RED})}>
+                        <span>📎 {file.name}</span>
+                        <button onClick={()=>{setFile(null);if(fileRef.current)fileRef.current.value=''}} style={C({background:'none',border:'none',color:RED,cursor:'pointer',fontSize:14,padding:0,marginLeft:'auto'})}>×</button>
+                      </div>}
+                      <input ref={iRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}
+                        placeholder={file ? 'Ajoute une question sur ce fichier (optionnel)…' : 'Message pour '+ex.name+'…'}
+                        style={C({flex:1,padding:'9px 14px',fontSize:13,fontFamily:F,background:WHITE,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',width:'100%'})} />
+                    </div>
+                    <input ref={fileRef} type="file" style={C({display:'none'})} onChange={e=>setFile(e.target.files?.[0]||null)} />
+                    <button onClick={()=>fileRef.current?.click()} title="Joindre un fichier" style={C({padding:'9px 12px',fontSize:16,background:file?'#FFF0F2':GREY,border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:file?RED:TEXT3,flexShrink:0})}>📎</button>
+                    <button onClick={()=>send()} disabled={load||(!inp.trim()&&!file)} style={C({padding:'9px 18px',fontSize:11,fontWeight:500,background:load||(!inp.trim()&&!file)?GREY2:RED,color:load||(!inp.trim()&&!file)?TEXT3:WHITE,border:'none',borderRadius:3,cursor:load||(!inp.trim()&&!file)?'not-allowed':'pointer',fontFamily:FE,letterSpacing:'0.06em',textTransform:'uppercase',flexShrink:0})}>Envoyer</button>
                   </div>
                 </div>
               </div>
