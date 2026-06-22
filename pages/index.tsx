@@ -201,6 +201,10 @@ export default function MZHub() {
   const [woff,setWoff]=useState(0)
   const [ap,setAp]=useState<string|null>(null)
   const [time,setTime]=useState('')
+  const [fileData, setFileData] = useState<{name:string;b64:string;mime:string} | null>(null)
+  const [bFileData, setBFileData] = useState<{name:string;b64:string;mime:string} | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const bFileRef = useRef<HTMLInputElement>(null)
   const chatEnd=useRef<HTMLDivElement>(null)
   const bEnd=useRef<HTMLDivElement>(null)
   const iRef=useRef<HTMLInputElement>(null)
@@ -219,6 +223,20 @@ export default function MZHub() {
     if(tks.length>0){const n=Date.now();setTasks(p=>[...p,...tks.map((t,i)=>({id:'a_'+n+'_'+i,text:t.text,proj:t.proj||'MZ Real Estate',deadline:t.deadline,done:false,source:src}))])}
     if(dts.length>0) setCal(p=>[...p,...dts])
   },[])
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, isBrief: boolean) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const b64 = (reader.result as string).split(',')[1]
+      const data = { name: file.name, b64, mime: file.type || 'application/octet-stream' }
+      if (isBrief) setBFileData(data)
+      else setFileData(data)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   const send=useCallback(async(ov?:string)=>{
     const txt=ov||inp; if((!txt.trim()&&!file)||!ae||load) return
