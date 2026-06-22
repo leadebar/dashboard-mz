@@ -110,7 +110,7 @@ export default function MZHub() {
   const [bt,setBt]=useState('')
   const [bmsgs,setBmsgs]=useState<{role:'user'|'assistant';content:string;ts:string}[]>([])
   const [bl,setBl]=useState(false)
-  const [kanban, setKanban] = useState<KTask[]>([])
+  const [tasks, setTasks] = useState<KTask[]>([])
   const [cal,setCal]=useState<CalDate[]>([])
   const [woff,setWoff]=useState(0)
   const [ap,setAp]=useState<string|null>(null)
