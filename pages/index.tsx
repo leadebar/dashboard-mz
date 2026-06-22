@@ -110,19 +110,8 @@ export default function MZHub() {
   const [bt,setBt]=useState('')
   const [bmsgs,setBmsgs]=useState<{role:'user'|'assistant';content:string;ts:string}[]>([])
   const [bl,setBl]=useState(false)
-  const [tasks,setTasks]=useState<KTask[]>([
-    {id:'k1',text:'Guide destination Saint-Tropez — SEO',proj:'MZ Rentals',deadline:'2026-06-30',done:false},
-    {id:'k2',text:'Meta descriptions 14 agences',proj:'MZ Real Estate',deadline:'2026-06-25',done:false},
-    {id:'k3',text:'Newsletter acheteurs juillet',proj:'Newsletters',deadline:'2026-06-28',done:false},
-    {id:'k4',text:'Analyse performance portails Q2',proj:'MZ Real Estate',done:false},
-    {id:'k5',text:'Articles blog rentals x5',proj:'MZ Rentals',deadline:'2026-07-05',done:false},
-    {id:'k6',text:'Customer Journey Mailchimp setup',proj:'Newsletters',done:false},
-  ])
-  const [cal,setCal]=useState<CalDate[]>([
-    {d:'2026-06-23',t:'Newsletter acheteurs',proj:'Newsletters',type:'newsletter'},
-    {d:'2026-06-25',t:'Deadline meta descriptions',proj:'MZ Real Estate',type:'deadline'},
-    {d:'2026-06-30',t:'Rendu guide Saint-Tropez',proj:'MZ Rentals',type:'deadline'},
-  ])
+  const [kanban, setKanban] = useState<KTask[]>([])
+  const [cal,setCal]=useState<CalDate[]>([])
   const [woff,setWoff]=useState(0)
   const [ap,setAp]=useState<string|null>(null)
   const [time,setTime]=useState('')
