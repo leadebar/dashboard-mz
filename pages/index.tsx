@@ -187,17 +187,25 @@ export default function MZHub() {
   const [pwdErr, setPwdErr] = useState(false)
   const [view,setView]=useState<View>('dashboard')
   const [ae,setAe]=useState<EId|null>(null)
-  const [hist,setHist]=useState<Record<EId,Msg[]>>({seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]})
+  const [hist,setHist]=useState<Record<EId,Msg[]>>(()=>{
+    try { const s=localStorage.getItem('mz_hist'); return s?JSON.parse(s):{seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]} } catch { return {seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]} }
+  })
   const [inp,setInp]=useState('')
   const [file,setFile]=useState<File|null>(null)
   const [fileLoading,setFileLoading]=useState(false)
   const fileRef=useRef<HTMLInputElement>(null)
   const [load,setLoad]=useState(false)
   const [bt,setBt]=useState('')
-  const [bmsgs,setBmsgs]=useState<{role:'user'|'assistant';content:string;ts:string}[]>([])
+  const [bmsgs,setBmsgs]=useState<{role:'user'|'assistant';content:string;ts:string}[]>(()=>{
+    try { const s=localStorage.getItem('mz_bmsgs'); return s?JSON.parse(s):[] } catch { return [] }
+  })
   const [bl,setBl]=useState(false)
-  const [tasks, setTasks] = useState<KTask[]>([])
-  const [cal,setCal]=useState<CalDate[]>([])
+  const [tasks, setTasks] = useState<KTask[]>(()=>{
+    try { const s=localStorage.getItem('mz_tasks'); return s?JSON.parse(s):[] } catch { return [] }
+  })
+  const [cal,setCal]=useState<CalDate[]>(()=>{
+    try { const s=localStorage.getItem('mz_cal'); return s?JSON.parse(s):[] } catch { return [] }
+  })
   const [woff,setWoff]=useState(0)
   const [ap,setAp]=useState<string|null>(null)
   const [time,setTime]=useState('')
@@ -208,6 +216,10 @@ export default function MZHub() {
   useEffect(()=>{const f=()=>setTime(new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));f();const t=setInterval(f,1000);return ()=>clearInterval(t)},[])
   useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:'smooth'})},[hist,load])
   useEffect(()=>{bEnd.current?.scrollIntoView({behavior:'smooth'})},[bmsgs,bl])
+  useEffect(()=>{ try { localStorage.setItem('mz_hist', JSON.stringify(hist)) } catch {} },[hist])
+  useEffect(()=>{ try { localStorage.setItem('mz_bmsgs', JSON.stringify(bmsgs)) } catch {} },[bmsgs])
+  useEffect(()=>{ try { localStorage.setItem('mz_tasks', JSON.stringify(tasks)) } catch {} },[tasks])
+  useEffect(()=>{ try { localStorage.setItem('mz_cal', JSON.stringify(cal)) } catch {} },[cal])
 
   const ex=ae?EX[ae]:null
   const msgs=ae?hist[ae]:[]
@@ -278,6 +290,12 @@ export default function MZHub() {
   },[bt,bl,bmsgs])
 
   const openE=(id:EId)=>{setAe(id);setView('chat');setTimeout(()=>iRef.current?.focus(),150)}
+  const resetAll=()=>{
+    if(!confirm('Effacer toutes les conversations, tâches et événements ?')) return
+    setHist({seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]})
+    setBmsgs([]); setTasks([]); setCal([])
+    try { ['mz_hist','mz_bmsgs','mz_tasks','mz_cal'].forEach(k=>localStorage.removeItem(k)) } catch {}
+  }
   const tog=(id:string)=>setTasks(p=>p.map(t=>t.id===id?{...t,done:!t.done}:t))
 
   if (!auth) return (
@@ -383,6 +401,7 @@ export default function MZHub() {
             </div>
             <div style={C({fontSize:11,color:TEXT3,fontVariantNumeric:'tabular-nums'})}>{time}</div>
             {ae&&<button onClick={()=>setHist(h=>({...h,[ae]:[]}))} style={C({padding:'4px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,color:TEXT3,cursor:'pointer',fontFamily:F})}>Effacer</button>}
+            <button onClick={resetAll} title="Tout réinitialiser" style={C({padding:'6px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,color:TEXT3,cursor:'pointer',fontFamily:F})}>↺</button>
             <button onClick={()=>{setView('chat');setAe(null)}} style={C({padding:'6px 16px',fontSize:11,fontWeight:500,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:FE,letterSpacing:'0.08em',textTransform:'uppercase'})}>+ Briefer l&apos;équipe</button>
           </div>
 
