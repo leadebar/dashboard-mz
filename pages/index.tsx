@@ -207,6 +207,20 @@ export default function MZHub() {
     try { const s=localStorage.getItem('mz_cal'); return s?JSON.parse(s):[] } catch { return [] }
   })
   const [woff,setWoff]=useState(0)
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [newTaskText, setNewTaskText] = useState('')
+  const [newTaskProj, setNewTaskProj] = useState('MZ Real Estate')
+  const [newTaskDeadline, setNewTaskDeadline] = useState('')
+  const [showAddCal, setShowAddCal] = useState(false)
+  const [newCalText, setNewCalText] = useState('')
+  const [newCalDate, setNewCalDate] = useState('')
+  const [newCalType, setNewCalType] = useState<'deadline'|'newsletter'|'rdv'|'task'>('task')
+  const [newCalProj, setNewCalProj] = useState('MZ Real Estate')
+  const [editTaskId, setEditTaskId] = useState<string|null>(null)
+  const [editTaskText, setEditTaskText] = useState('')
+  const [editCalIdx, setEditCalIdx] = useState<number|null>(null)
+  const [editCalText, setEditCalText] = useState('')
+  const [editCalDate, setEditCalDate] = useState('')
   const [ap,setAp]=useState<string|null>(null)
   const [time,setTime]=useState('')
   const chatEnd=useRef<HTMLDivElement>(null)
@@ -288,6 +302,32 @@ export default function MZHub() {
     } catch { setBmsgs(p=>[...p,{role:'assistant',content:'Erreur.',ts:''}]) }
     setBl(false)
   },[bt,bl,bmsgs])
+
+  const addTask = () => {
+    if (!newTaskText.trim()) return
+    const id = 'manual_' + Date.now()
+    setTasks(p => [...p, {id, text: newTaskText, proj: newTaskProj, deadline: newTaskDeadline || undefined, done: false, source: 'manuel'}])
+    setNewTaskText(''); setNewTaskDeadline(''); setShowAddTask(false)
+  }
+  const addCalItem = () => {
+    if (!newCalText.trim() || !newCalDate) return
+    setCal(p => [...p, {d: newCalDate, t: newCalText, proj: newCalProj, type: newCalType}])
+    setNewCalText(''); setNewCalDate(''); setShowAddCal(false)
+  }
+  const deleteTask = (id: string) => setTasks(p => p.filter(t => t.id !== id))
+  const startEditTask = (t: KTask) => { setEditTaskId(t.id); setEditTaskText(t.text) }
+  const saveEditTask = () => {
+    if (!editTaskText.trim()) return
+    setTasks(p => p.map(t => t.id === editTaskId ? {...t, text: editTaskText} : t))
+    setEditTaskId(null); setEditTaskText('')
+  }
+  const deleteCalItem = (idx: number) => setCal(p => p.filter((_, i) => i !== idx))
+  const startEditCal = (idx: number, item: CalDate) => { setEditCalIdx(idx); setEditCalText(item.t); setEditCalDate(item.d) }
+  const saveEditCal = () => {
+    if (!editCalText.trim()) return
+    setCal(p => p.map((item, i) => i === editCalIdx ? {...item, t: editCalText, d: editCalDate} : item))
+    setEditCalIdx(null); setEditCalText('')
+  }
 
   const openE=(id:EId)=>{setAe(id);setView('chat');setTimeout(()=>iRef.current?.focus(),150)}
   const resetAll=()=>{
@@ -447,34 +487,90 @@ export default function MZHub() {
                 </div>
                 <div style={C({display:'grid',gridTemplateColumns:'1fr 1fr',gap:14})}>
                   <div style={C({background:WHITE,border:'1px solid '+BORDER,borderRadius:3,padding:'14px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'})}>
-                    <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10,fontFamily:F})}>Tâches prioritaires</div>
+                    <div style={C({display:'flex',alignItems:'center',marginBottom:10})}>
+                      <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',flex:1,fontFamily:F})}>Tâches prioritaires</div>
+                      <button onClick={()=>setShowAddTask(v=>!v)} style={C({padding:'2px 8px',fontSize:11,background:showAddTask?GREY2:RED,color:showAddTask?TEXT3:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F})}>+ Ajouter</button>
+                    </div>
+                    {showAddTask && (
+                      <div style={C({marginBottom:10,padding:'10px',background:'#FAFAFA',border:'1px solid '+BORDER,borderRadius:3})}>
+                        <input value={newTaskText} onChange={e=>setNewTaskText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTask()}
+                          placeholder="Intitulé de la tâche..."
+                          style={C({width:'100%',padding:'6px 8px',fontSize:12,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',marginBottom:6,boxSizing:'border-box' as const})} />
+                        <div style={C({display:'flex',gap:6,marginBottom:6})}>
+                          <select value={newTaskProj} onChange={e=>setNewTaskProj(e.target.value)}
+                            style={C({flex:1,padding:'5px 6px',fontSize:11,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',background:WHITE})}>
+                            {Object.keys(PROJ).map(p=><option key={p} value={p}>{p}</option>)}
+                          </select>
+                          <input type="date" value={newTaskDeadline} onChange={e=>setNewTaskDeadline(e.target.value)}
+                            style={C({flex:1,padding:'5px 6px',fontSize:11,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none'})} />
+                        </div>
+                        <div style={C({display:'flex',gap:6})}>
+                          <button onClick={addTask} style={C({flex:1,padding:'6px',fontSize:11,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F,fontWeight:500})}>Ajouter</button>
+                          <button onClick={()=>setShowAddTask(false)} style={C({padding:'6px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3,fontFamily:F})}>Annuler</button>
+                        </div>
+                      </div>
+                    )}
                     {tasks.filter(t=>!t.done).slice(0,6).map(t=>{
                       const pc=PROJ[t.proj]||PROJ['MZ Real Estate']
                       return (
-                        <div key={t.id} onClick={()=>tog(t.id)} style={C({display:'flex',alignItems:'flex-start',gap:8,padding:'6px 0',borderBottom:'1px solid '+GREY2,cursor:'pointer'})}>
-                          <div style={C({width:13,height:13,border:'1.5px solid '+RED,borderRadius:2,flexShrink:0,marginTop:2})}></div>
+                        <div key={t.id} style={C({display:'flex',alignItems:'flex-start',gap:8,padding:'6px 0',borderBottom:'1px solid '+GREY2})}>
+                          <div onClick={()=>tog(t.id)} style={C({width:13,height:13,border:'1.5px solid '+RED,borderRadius:2,flexShrink:0,marginTop:2,cursor:'pointer'})}></div>
                           <div style={C({flex:1,minWidth:0})}>
                             <div style={C({fontSize:12,color:TEXT,lineHeight:1.4,fontFamily:F})}>{t.text}</div>
-                            <div style={C({display:'flex',gap:6,marginTop:2})}>
+                            <div style={C({display:'flex',gap:6,marginTop:2,alignItems:'center'})}>
                               <span style={C({fontSize:10,color:RED})}>{t.proj}</span>
                               {t.deadline&&<span style={C({fontSize:10,color:RED,fontWeight:500})}>⚡ {fd(t.deadline)}</span>}
+                              <button onClick={()=>deleteTask(t.id)} style={C({marginLeft:'auto',padding:'1px 5px',fontSize:10,background:'none',border:'none',cursor:'pointer',color:TEXT3,fontFamily:F})}>✕</button>
                             </div>
                           </div>
                         </div>
                       )
                     })}
+                    {tasks.filter(t=>!t.done).length===0&&<div style={C({fontSize:12,color:TEXT3,textAlign:'center',padding:'16px 0',fontFamily:F})}>Aucune tâche en cours</div>}
                   </div>
                   <div style={C({background:WHITE,border:'1px solid '+BORDER,borderRadius:3,padding:'14px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'})}>
-                    <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10,fontFamily:F})}>Prochaines échéances</div>
+                    <div style={C({display:'flex',alignItems:'center',marginBottom:10})}>
+                      <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',flex:1,fontFamily:F})}>Prochaines échéances</div>
+                      <button onClick={()=>setShowAddCal(v=>!v)} style={C({padding:'2px 8px',fontSize:11,background:showAddCal?GREY2:RED,color:showAddCal?TEXT3:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F})}>+ Ajouter</button>
+                    </div>
+                    {showAddCal && (
+                      <div style={C({marginBottom:10,padding:'10px',background:'#FAFAFA',border:'1px solid '+BORDER,borderRadius:3})}>
+                        <input value={newCalText} onChange={e=>setNewCalText(e.target.value)}
+                          placeholder="Titre de l'événement..."
+                          style={C({width:'100%',padding:'6px 8px',fontSize:12,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',marginBottom:6,boxSizing:'border-box' as const})} />
+                        <div style={C({display:'flex',gap:6,marginBottom:6})}>
+                          <input type="date" value={newCalDate} onChange={e=>setNewCalDate(e.target.value)}
+                            style={C({flex:1,padding:'5px 6px',fontSize:11,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none'})} />
+                          <select value={newCalType} onChange={e=>setNewCalType(e.target.value as 'deadline'|'newsletter'|'rdv'|'task')}
+                            style={C({flex:1,padding:'5px 6px',fontSize:11,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',background:WHITE})}>
+                            <option value="task">Tâche</option>
+                            <option value="deadline">Deadline</option>
+                            <option value="newsletter">Newsletter</option>
+                            <option value="rdv">RDV</option>
+                          </select>
+                        </div>
+                        <select value={newCalProj} onChange={e=>setNewCalProj(e.target.value)}
+                          style={C({width:'100%',padding:'5px 6px',fontSize:11,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',background:WHITE,marginBottom:6,boxSizing:'border-box' as const})}>
+                          {Object.keys(PROJ).map(p=><option key={p} value={p}>{p}</option>)}
+                        </select>
+                        <div style={C({display:'flex',gap:6})}>
+                          <button onClick={addCalItem} style={C({flex:1,padding:'6px',fontSize:11,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F,fontWeight:500})}>Ajouter</button>
+                          <button onClick={()=>setShowAddCal(false)} style={C({padding:'6px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3,fontFamily:F})}>Annuler</button>
+                        </div>
+                      </div>
+                    )}
                     {cal.filter(c=>c.d>=today).sort((a,b)=>a.d.localeCompare(b.d)).slice(0,6).map((c,i)=>{
                       const t=tc(c.type)
+                      const globalIdx = cal.findIndex(item=>item.d===c.d&&item.t===c.t)
                       return (
                         <div key={i} style={C({display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:'1px solid '+GREY2})}>
                           <span style={C({fontSize:10,fontWeight:600,color:t.color,background:t.bg,padding:'2px 7px',borderRadius:3,flexShrink:0,border:'1px solid '+t.border,fontFamily:F})}>{fd(c.d)}</span>
-                          <span style={C({fontSize:12,color:TEXT,fontFamily:F})}>{c.t}</span>
+                          <span style={C({fontSize:12,color:TEXT,fontFamily:F,flex:1})}>{c.t}</span>
+                          <button onClick={()=>deleteCalItem(globalIdx)} style={C({padding:'1px 5px',fontSize:10,background:'none',border:'none',cursor:'pointer',color:TEXT3,fontFamily:F,flexShrink:0})}>✕</button>
                         </div>
                       )
                     })}
+                    {cal.filter(c=>c.d>=today).length===0&&<div style={C({fontSize:12,color:TEXT3,textAlign:'center',padding:'16px 0',fontFamily:F})}>Aucune échéance</div>}
                   </div>
                 </div>
               </div>
@@ -648,14 +744,27 @@ export default function MZHub() {
                     {tasks.filter(t=>!ap||t.proj===ap).map(t=>{
                       const pc=PROJ[t.proj]||PROJ['MZ Real Estate']
                       return (
-                        <div key={t.id} onClick={()=>tog(t.id)} style={C({display:'flex',alignItems:'flex-start',gap:10,padding:'8px 0',borderBottom:'1px solid '+GREY2,cursor:'pointer'})}>
-                          <div style={C({width:15,height:15,border:'1.5px solid '+(t.done?RED:BORDER),background:t.done?RED:'transparent',borderRadius:2,flexShrink:0,marginTop:2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:WHITE,fontWeight:700})}>{t.done?'✓':''}</div>
+                        <div key={t.id} style={C({display:'flex',alignItems:'flex-start',gap:10,padding:'8px 0',borderBottom:'1px solid '+GREY2})}>
+                          <div onClick={()=>tog(t.id)} style={C({width:15,height:15,border:'1.5px solid '+(t.done?RED:BORDER),background:t.done?RED:'transparent',borderRadius:2,flexShrink:0,marginTop:2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:WHITE,fontWeight:700,cursor:'pointer'})}>{t.done?'✓':''}</div>
                           <div style={C({flex:1})}>
-                            <div style={C({fontSize:13,color:t.done?TEXT3:TEXT,textDecoration:t.done?'line-through':'none',lineHeight:1.4,fontFamily:F})}>{t.text}</div>
-                            <div style={C({display:'flex',gap:8,marginTop:3})}>
+                            {editTaskId===t.id ? (
+                              <div style={C({display:'flex',gap:6,alignItems:'center'})}>
+                                <input value={editTaskText} onChange={e=>setEditTaskText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEditTask()} autoFocus
+                                  style={C({flex:1,padding:'4px 8px',fontSize:12,fontFamily:F,border:'1px solid '+RED,borderRadius:3,color:TEXT,outline:'none'})} />
+                                <button onClick={saveEditTask} style={C({padding:'3px 8px',fontSize:11,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F})}>OK</button>
+                                <button onClick={()=>setEditTaskId(null)} style={C({padding:'3px 6px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3,fontFamily:F})}>✕</button>
+                              </div>
+                            ) : (
+                              <div style={C({fontSize:13,color:t.done?TEXT3:TEXT,textDecoration:t.done?'line-through':'none',lineHeight:1.4,fontFamily:F})}>{t.text}</div>
+                            )}
+                            <div style={C({display:'flex',gap:8,marginTop:3,alignItems:'center'})}>
                               <span style={C({fontSize:10,color:RED,background:pc.bg,padding:'1px 7px',borderRadius:3,border:'1px solid '+pc.border,fontFamily:F})}>{t.proj}</span>
                               {t.deadline&&<span style={C({fontSize:10,color:RED,fontWeight:600})}>⚡ {fd(t.deadline)}</span>}
                               {t.source&&<span style={C({fontSize:10,color:TEXT3,fontFamily:F})}>via {t.source}</span>}
+                              <div style={C({marginLeft:'auto',display:'flex',gap:4})}>
+                                <button onClick={()=>startEditTask(t)} style={C({padding:'2px 6px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3,fontFamily:F})}>✎</button>
+                                <button onClick={()=>deleteTask(t.id)} style={C({padding:'2px 6px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:RED,fontFamily:F})}>✕</button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -695,7 +804,33 @@ export default function MZHub() {
                         <div style={C({fontFamily:FE,fontSize:20,color:isT?RED:DARK,marginBottom:8})}>{date.getDate()}</div>
                         {items.map((item,j)=>{
                           const t=tc(item.type)
-                          return <div key={j} style={C({padding:'3px 6px',borderRadius:2,marginBottom:4,fontSize:10,lineHeight:1.4,background:t.bg,color:t.color,border:'1px solid '+t.border,fontFamily:F})}>{item.t}</div>
+                          const globalIdx = cal.findIndex((c,gi) => {
+                            let count = 0
+                            for(let k=0;k<cal.length;k++) { if(cal[k].d===dStr) { if(count===j) return k===gi; count++ } }
+                            return false
+                          })
+                          return (
+                            <div key={j} style={C({marginBottom:4})}>
+                              {editCalIdx===globalIdx ? (
+                                <div style={C({display:'flex',flexDirection:'column',gap:3})}>
+                                  <input value={editCalText} onChange={e=>setEditCalText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEditCal()} autoFocus
+                                    style={C({width:'100%',padding:'3px 5px',fontSize:9,fontFamily:F,border:'1px solid '+RED,borderRadius:2,color:TEXT,outline:'none',boxSizing:'border-box' as const})} />
+                                  <input type="date" value={editCalDate} onChange={e=>setEditCalDate(e.target.value)}
+                                    style={C({width:'100%',padding:'2px 4px',fontSize:9,fontFamily:F,border:'1px solid '+RED,borderRadius:2,color:TEXT,outline:'none',boxSizing:'border-box' as const})} />
+                                  <div style={C({display:'flex',gap:3})}>
+                                    <button onClick={saveEditCal} style={C({flex:1,padding:'2px',fontSize:9,background:RED,color:WHITE,border:'none',borderRadius:2,cursor:'pointer'})}>OK</button>
+                                    <button onClick={()=>setEditCalIdx(null)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3})}>✕</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={C({padding:'3px 6px',borderRadius:2,fontSize:10,lineHeight:1.4,background:t.bg,color:t.color,border:'1px solid '+t.border,fontFamily:F,display:'flex',alignItems:'center',gap:3})}>
+                                  <span style={C({flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'})}>{item.t}</span>
+                                  <button onClick={()=>startEditCal(globalIdx, item)} style={C({padding:'0 3px',fontSize:9,background:'none',border:'none',cursor:'pointer',color:t.color,flexShrink:0,opacity:0.7})}>✎</button>
+                                  <button onClick={()=>deleteCalItem(globalIdx)} style={C({padding:'0 3px',fontSize:9,background:'none',border:'none',cursor:'pointer',color:t.color,flexShrink:0,opacity:0.7})}>✕</button>
+                                </div>
+                              )}
+                            </div>
+                          )
                         })}
                       </div>
                     )
