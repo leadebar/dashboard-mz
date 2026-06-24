@@ -805,7 +805,7 @@ export default function MZHub() {
                   </div>
                   <div style={C({padding:'11px 14px',borderTop:'1px solid '+BORDER,display:'flex',gap:8,background:'#FAFAFA',flexShrink:0,alignItems:'center'})}>
                     <input type="file" ref={fileRef} onChange={e=>{const f=e.target.files?.[0];if(f)setFile(f);e.target.value=''}} style={C({display:'none'})}/>
-                    <button onClick={()=>fileRef.current?.click()} style={C({padding:'9px 10px',fontSize:14,background:file?BLUE_BG:'none',border:'1px solid '+(file?BLUE_BORDER:BORDER),borderRadius:3,cursor:'pointer',color:file?BLUE:TEXT3,flexShrink:0,title:file?file.name:'Joindre un fichier'})}>📎</button>
+                    <button onClick={()=>fileRef.current?.click()} title={file?file.name:'Joindre un fichier'} style={C({padding:'9px 10px',fontSize:14,background:file?BLUE_BG:'none',border:'1px solid '+(file?BLUE_BORDER:BORDER),borderRadius:3,cursor:'pointer',color:file?BLUE:TEXT3,flexShrink:0})}>📎</button>
                     {file&&<span style={C({fontSize:10,color:BLUE,maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flexShrink:0})}>{file.name}</span>}
                     <input ref={iRef} value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}
                       placeholder={'Message pour '+ex.name+'…'}
