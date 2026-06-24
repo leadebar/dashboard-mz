@@ -4,7 +4,7 @@ import Head from 'next/head'
 type Msg = { role: 'user' | 'assistant'; content: string; ts: string; tasks?: Task[]; dates?: CalDate[] }
 type Task = { text: string; proj: string; deadline?: string; who: string }
 type CalDate = { d: string; t: string; proj: string; type: 'deadline' | 'rdv' | 'newsletter' | 'task' }
-type KTask = { id: string; text: string; proj: string; deadline?: string; done: boolean; source?: string }
+type KTask = { id: string; text: string; proj: string; deadline?: string; done: boolean; source?: string; notes?: string }
 type View = 'dashboard' | 'chat' | 'todo' | 'calendrier'
 type EId = 'seo' | 'blog' | 'newsletter' | 'agenda' | 'mails' | 'ppt' | 'data' | 'strategie'
 
@@ -207,6 +207,8 @@ export default function MZHub() {
     try { const s=localStorage.getItem('mz_cal'); return s?JSON.parse(s):[] } catch { return [] }
   })
   const [woff,setWoff]=useState(0)
+  const [expandedTaskId, setExpandedTaskId] = useState<string|null>(null)
+  const [taskNotes, setTaskNotes] = useState<Record<string,string>>({})
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTaskText, setNewTaskText] = useState('')
   const [newTaskProj, setNewTaskProj] = useState('MZ Real Estate')
@@ -234,6 +236,7 @@ export default function MZHub() {
   useEffect(()=>{ try { localStorage.setItem('mz_bmsgs', JSON.stringify(bmsgs)) } catch {} },[bmsgs])
   useEffect(()=>{ try { localStorage.setItem('mz_tasks', JSON.stringify(tasks)) } catch {} },[tasks])
   useEffect(()=>{ try { localStorage.setItem('mz_cal', JSON.stringify(cal)) } catch {} },[cal])
+  useEffect(()=>{ try { localStorage.setItem('mz_notes', JSON.stringify(taskNotes)) } catch {} },[taskNotes])
 
   const ex=ae?EX[ae]:null
   const msgs=ae?hist[ae]:[]
@@ -302,6 +305,10 @@ export default function MZHub() {
     } catch { setBmsgs(p=>[...p,{role:'assistant',content:'Erreur.',ts:''}]) }
     setBl(false)
   },[bt,bl,bmsgs])
+
+  const saveNote = (id: string, note: string) => {
+    setTaskNotes(prev => ({...prev, [id]: note}))
+  }
 
   const addTask = () => {
     if (!newTaskText.trim()) return
@@ -513,16 +520,30 @@ export default function MZHub() {
                     {tasks.filter(t=>!t.done).slice(0,6).map(t=>{
                       const pc=PROJ[t.proj]||PROJ['MZ Real Estate']
                       return (
-                        <div key={t.id} style={C({display:'flex',alignItems:'flex-start',gap:8,padding:'6px 0',borderBottom:'1px solid '+GREY2})}>
-                          <div onClick={()=>tog(t.id)} style={C({width:13,height:13,border:'1.5px solid '+RED,borderRadius:2,flexShrink:0,marginTop:2,cursor:'pointer'})}></div>
-                          <div style={C({flex:1,minWidth:0})}>
-                            <div style={C({fontSize:12,color:TEXT,lineHeight:1.4,fontFamily:F})}>{t.text}</div>
-                            <div style={C({display:'flex',gap:6,marginTop:2,alignItems:'center'})}>
-                              <span style={C({fontSize:10,color:RED})}>{t.proj}</span>
-                              {t.deadline&&<span style={C({fontSize:10,color:RED,fontWeight:500})}>⚡ {fd(t.deadline)}</span>}
-                              <button onClick={()=>deleteTask(t.id)} style={C({marginLeft:'auto',padding:'1px 5px',fontSize:10,background:'none',border:'none',cursor:'pointer',color:TEXT3,fontFamily:F})}>✕</button>
+                        <div key={t.id} style={C({borderBottom:'1px solid '+GREY2})}>
+                          <div style={C({display:'flex',alignItems:'flex-start',gap:8,padding:'6px 0'})}>
+                            <div onClick={()=>tog(t.id)} style={C({width:13,height:13,border:'1.5px solid '+RED,borderRadius:2,flexShrink:0,marginTop:2,cursor:'pointer'})}></div>
+                            <div style={C({flex:1,minWidth:0})}>
+                              <div onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({fontSize:12,color:TEXT,lineHeight:1.4,fontFamily:F,cursor:'pointer'})}>{t.text}</div>
+                              <div style={C({display:'flex',gap:6,marginTop:2,alignItems:'center'})}>
+                                <span style={C({fontSize:10,color:RED})}>{t.proj}</span>
+                                {t.deadline&&<span style={C({fontSize:10,color:RED,fontWeight:500})}>⚡ {fd(t.deadline)}</span>}
+                                {taskNotes[t.id]&&<span style={C({fontSize:10,color:'#0D47A1'})}>📝</span>}
+                                <button onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({marginLeft:'auto',padding:'1px 5px',fontSize:10,background:'none',border:'none',cursor:'pointer',color:expandedTaskId===t.id?'#0D47A1':TEXT3,fontFamily:F})}>📝</button>
+                                <button onClick={()=>deleteTask(t.id)} style={C({padding:'1px 5px',fontSize:10,background:'none',border:'none',cursor:'pointer',color:TEXT3,fontFamily:F})}>✕</button>
+                              </div>
                             </div>
                           </div>
+                          {expandedTaskId===t.id && (
+                            <div style={C({margin:'0 0 8px 21px',padding:'8px 10px',background:'#FAFAFA',border:'1px solid #E3F2FD',borderLeft:'3px solid #0D47A1',borderRadius:'0 3px 3px 0'})}>
+                              <textarea
+                                value={taskNotes[t.id]||''}
+                                onChange={e=>saveNote(t.id, e.target.value)}
+                                placeholder={'Notes, références...\nEx : MZCA6408, MZIB0076'}
+                                style={C({width:'100%',minHeight:60,padding:'6px 8px',fontSize:11,fontFamily:F,border:'1px solid #DCDCDC',borderRadius:3,color:TEXT,outline:'none',resize:'vertical',lineHeight:1.5,boxSizing:'border-box' as const})}
+                              />
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -744,29 +765,44 @@ export default function MZHub() {
                     {tasks.filter(t=>!ap||t.proj===ap).map(t=>{
                       const pc=PROJ[t.proj]||PROJ['MZ Real Estate']
                       return (
-                        <div key={t.id} style={C({display:'flex',alignItems:'flex-start',gap:10,padding:'8px 0',borderBottom:'1px solid '+GREY2})}>
-                          <div onClick={()=>tog(t.id)} style={C({width:15,height:15,border:'1.5px solid '+(t.done?RED:BORDER),background:t.done?RED:'transparent',borderRadius:2,flexShrink:0,marginTop:2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:WHITE,fontWeight:700,cursor:'pointer'})}>{t.done?'✓':''}</div>
-                          <div style={C({flex:1})}>
-                            {editTaskId===t.id ? (
-                              <div style={C({display:'flex',gap:6,alignItems:'center'})}>
-                                <input value={editTaskText} onChange={e=>setEditTaskText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEditTask()} autoFocus
-                                  style={C({flex:1,padding:'4px 8px',fontSize:12,fontFamily:F,border:'1px solid '+RED,borderRadius:3,color:TEXT,outline:'none'})} />
-                                <button onClick={saveEditTask} style={C({padding:'3px 8px',fontSize:11,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F})}>OK</button>
-                                <button onClick={()=>setEditTaskId(null)} style={C({padding:'3px 6px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3,fontFamily:F})}>✕</button>
-                              </div>
-                            ) : (
-                              <div style={C({fontSize:13,color:t.done?TEXT3:TEXT,textDecoration:t.done?'line-through':'none',lineHeight:1.4,fontFamily:F})}>{t.text}</div>
-                            )}
-                            <div style={C({display:'flex',gap:8,marginTop:3,alignItems:'center'})}>
-                              <span style={C({fontSize:10,color:RED,background:pc.bg,padding:'1px 7px',borderRadius:3,border:'1px solid '+pc.border,fontFamily:F})}>{t.proj}</span>
-                              {t.deadline&&<span style={C({fontSize:10,color:RED,fontWeight:600})}>⚡ {fd(t.deadline)}</span>}
-                              {t.source&&<span style={C({fontSize:10,color:TEXT3,fontFamily:F})}>via {t.source}</span>}
-                              <div style={C({marginLeft:'auto',display:'flex',gap:4})}>
-                                <button onClick={()=>startEditTask(t)} style={C({padding:'2px 6px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3,fontFamily:F})}>✎</button>
-                                <button onClick={()=>deleteTask(t.id)} style={C({padding:'2px 6px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:RED,fontFamily:F})}>✕</button>
+                        <div key={t.id} style={C({borderBottom:'1px solid '+GREY2})}>
+                          <div style={C({display:'flex',alignItems:'flex-start',gap:10,padding:'8px 0'})}>
+                            <div onClick={()=>tog(t.id)} style={C({width:15,height:15,border:'1.5px solid '+(t.done?RED:BORDER),background:t.done?RED:'transparent',borderRadius:2,flexShrink:0,marginTop:2,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:WHITE,fontWeight:700,cursor:'pointer'})}>{t.done?'✓':''}</div>
+                            <div style={C({flex:1})}>
+                              {editTaskId===t.id ? (
+                                <div style={C({display:'flex',gap:6,alignItems:'center'})}>
+                                  <input value={editTaskText} onChange={e=>setEditTaskText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEditTask()} autoFocus
+                                    style={C({flex:1,padding:'4px 8px',fontSize:12,fontFamily:F,border:'1px solid '+RED,borderRadius:3,color:TEXT,outline:'none'})} />
+                                  <button onClick={saveEditTask} style={C({padding:'3px 8px',fontSize:11,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:F})}>OK</button>
+                                  <button onClick={()=>setEditTaskId(null)} style={C({padding:'3px 6px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3,fontFamily:F})}>✕</button>
+                                </div>
+                              ) : (
+                                <div onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({fontSize:13,color:t.done?TEXT3:TEXT,textDecoration:t.done?'line-through':'none',lineHeight:1.4,fontFamily:F,cursor:'pointer'})}>{t.text}</div>
+                              )}
+                              <div style={C({display:'flex',gap:8,marginTop:3,alignItems:'center'})}>
+                                <span style={C({fontSize:10,color:RED,background:pc.bg,padding:'1px 7px',borderRadius:3,border:'1px solid '+pc.border,fontFamily:F})}>{t.proj}</span>
+                                {t.deadline&&<span style={C({fontSize:10,color:RED,fontWeight:600})}>⚡ {fd(t.deadline)}</span>}
+                                {taskNotes[t.id]&&<span style={C({fontSize:10,color:'#0D47A1'})}>📝 note</span>}
+                                <div style={C({marginLeft:'auto',display:'flex',gap:4})}>
+                                  <button onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({padding:'2px 6px',fontSize:10,background:expandedTaskId===t.id?'#E3F2FD':'none',border:'1px solid '+(expandedTaskId===t.id?'#90CAF9':BORDER),borderRadius:2,cursor:'pointer',color:expandedTaskId===t.id?'#0D47A1':TEXT3,fontFamily:F})}>📝</button>
+                                  <button onClick={()=>startEditTask(t)} style={C({padding:'2px 6px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3,fontFamily:F})}>✎</button>
+                                  <button onClick={()=>deleteTask(t.id)} style={C({padding:'2px 6px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:RED,fontFamily:F})}>✕</button>
+                                </div>
                               </div>
                             </div>
                           </div>
+                          {expandedTaskId===t.id && (
+                            <div style={C({margin:'0 0 10px 25px',padding:'10px 12px',background:'#FAFAFA',border:'1px solid #E3F2FD',borderLeft:'3px solid #0D47A1',borderRadius:'0 3px 3px 0'})}>
+                              <div style={C({fontSize:10,fontWeight:600,color:'#0D47A1',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6,fontFamily:F})}>Notes & références</div>
+                              <textarea
+                                value={taskNotes[t.id]||''}
+                                onChange={e=>saveNote(t.id, e.target.value)}
+                                placeholder={'Ajoute tes notes, références, liens...\nEx : MZCA6408, MZIB0076, remarques...'}
+                                style={C({width:'100%',minHeight:80,padding:'7px 9px',fontSize:12,fontFamily:F,border:'1px solid #DCDCDC',borderRadius:3,color:TEXT,outline:'none',resize:'vertical',lineHeight:1.6,boxSizing:'border-box' as const})}
+                              />
+                              <div style={C({fontSize:10,color:TEXT3,marginTop:4,fontFamily:F})}>Contenu sauvegardé automatiquement</div>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
