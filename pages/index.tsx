@@ -123,7 +123,7 @@ export default function MZHub() {
   const [view,setView]=useState<View>('dashboard')
   const [ae,setAe]=useState<EId|null>(null)
   const [hist,setHist]=useState<Record<EId,Msg[]>>(()=>{
-    try{const s=localStorage.getItem('mz_hist');return s?JSON.parse(s):{seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]}}catch{return{seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]}}
+    try{if(typeof window==='undefined')return{seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]};const s=localStorage.getItem('mz_hist');return s?JSON.parse(s):{seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]}}catch{return{seo:[],blog:[],newsletter:[],agenda:[],mails:[],ppt:[],data:[],strategie:[]}}
   })
   const [inp,setInp]=useState('')
   const [file,setFile]=useState<File|null>(null)
@@ -132,17 +132,17 @@ export default function MZHub() {
   const [load,setLoad]=useState(false)
   const [bt,setBt]=useState('')
   const [bmsgs,setBmsgs]=useState<{role:'user'|'assistant';content:string;ts:string}[]>(()=>{
-    try{const s=localStorage.getItem('mz_bmsgs');return s?JSON.parse(s):[]}catch{return[]}
+    try{if(typeof window==='undefined')return[];const s=localStorage.getItem('mz_bmsgs');return s?JSON.parse(s):[]}catch{return[]}
   })
   const [bl,setBl]=useState(false)
   const [tasks,setTasks]=useState<KTask[]>(()=>{
-    try{const s=localStorage.getItem('mz_tasks');return s?JSON.parse(s):[]}catch{return[]}
+    try{if(typeof window==='undefined')return[];const s=localStorage.getItem('mz_tasks');return s?JSON.parse(s):[]}catch{return[]}
   })
   const [cal,setCal]=useState<CalDate[]>(()=>{
-    try{const s=localStorage.getItem('mz_cal');return s?JSON.parse(s):[]}catch{return[]}
+    try{if(typeof window==='undefined')return[];const s=localStorage.getItem('mz_cal');return s?JSON.parse(s):[]}catch{return[]}
   })
   const [taskNotes,setTaskNotes]=useState<Record<string,string>>(()=>{
-    try{const s=localStorage.getItem('mz_notes');return s?JSON.parse(s):{}}catch{return{}}
+    try{if(typeof window==='undefined')return{};const s=localStorage.getItem('mz_notes');return s?JSON.parse(s):{}}catch{return{}}
   })
   const [expandedTaskId,setExpandedTaskId]=useState<string|null>(null)
   const [editTaskId,setEditTaskId]=useState<string|null>(null)
