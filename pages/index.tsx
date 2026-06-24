@@ -81,8 +81,8 @@ function fd(d: string) {
 
 function getWeek(off=0) {
   const t=new Date(), day=t.getDay(), m=new Date(t)
-  m.setDate(t.getDate()-(day===0?6:day-1)+off*7)
-  return Array.from({length:7},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d})
+  m.setDate(t.getDate()-(day===0?6:day-1)+off*4)
+  return Array.from({length:28},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d})
 }
 
 const DAYS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
@@ -818,7 +818,7 @@ export default function MZHub() {
                 <div style={C({display:'flex',alignItems:'center',gap:12,marginBottom:14})}>
                   <div style={C({fontFamily:FE,fontSize:17,color:DARK,flex:1,letterSpacing:'0.06em',textTransform:'uppercase'})}>Calendrier <span style={C({color:RED})}>MZ</span></div>
                   <div style={C({display:'flex',gap:4})}>
-                    {[{l:'←',a:()=>setWoff(w=>w-1)},{l:"Auj.",a:()=>setWoff(0)},{l:'→',a:()=>setWoff(w=>w+1)}].map((b,i)=>(
+                    {[{l:'←',a:()=>setWoff(w=>w-1)},{l:"Aujourd'hui",a:()=>setWoff(0)},{l:'→',a:()=>setWoff(w=>w+1)}].map((b,i)=>(
                       <button key={i} onClick={b.a} style={C({padding:'5px 12px',fontSize:11,background:i===1&&woff===0?RED:WHITE,color:i===1&&woff===0?WHITE:TEXT2,border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',fontFamily:F})}>{b.l}</button>
                     ))}
                   </div>
@@ -828,6 +828,12 @@ export default function MZHub() {
                     const t=tc(l.t)
                     return <span key={l.t} style={C({fontSize:10,padding:'2px 8px',borderRadius:3,background:t.bg,color:t.color,border:'1px solid '+t.border,fontFamily:F})}>{l.l}</span>
                   })}
+                </div>
+                {/* Day headers */}
+                <div style={C({display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8,marginBottom:4})}>
+                  {['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d=>(
+                    <div key={d} style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.1em',textAlign:'center',fontFamily:F,padding:'4px 0'})}>{d}</div>
+                  ))}
                 </div>
                 <div style={C({display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:8})}>
                   {week.map((date,i)=>{
