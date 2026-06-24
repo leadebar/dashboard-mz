@@ -804,11 +804,7 @@ export default function MZHub() {
                         <div style={C({fontFamily:FE,fontSize:20,color:isT?RED:DARK,marginBottom:8})}>{date.getDate()}</div>
                         {items.map((item,j)=>{
                           const t=tc(item.type)
-                          const globalIdx = cal.findIndex((c,gi) => {
-                            let count = 0
-                            for(let k=0;k<cal.length;k++) { if(cal[k].d===dStr) { if(count===j) return k===gi; count++ } }
-                            return false
-                          })
+                          const globalIdx = cal.findIndex((ci,gi) => ci.d===item.d && ci.t===item.t && gi>=0)
                           return (
                             <div key={j} style={C({marginBottom:4})}>
                               {editCalIdx===globalIdx ? (
