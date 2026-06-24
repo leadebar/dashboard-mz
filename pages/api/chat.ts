@@ -9,12 +9,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2000, system, messages }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        system,
+        messages,
+        tools: [
+          {
+            type: 'web_search_20250305',
+            name: 'web_search',
+            max_uses: 3,
+          }
+        ],
+      }),
     })
     const data = await response.json()
     if (!response.ok) return res.status(response.status).json(data)
-    res.status(200).json({ content: data.content?.[0]?.text || '' })
+
+    // Extract text from all content blocks (text + tool_result)
+    const blocks = data.content || []
+    const text = blocks
+      .filter((b: {type: string}) => b.type === 'text')
+      .map((b: {text: string}) => b.text)
+      .join('\n')
+
+    res.status(200).json({ content: text || '' })
   } catch {
     res.status(500).json({ error: 'Internal server error' })
   }
