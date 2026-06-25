@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Head from 'next/head'
 
 // ── TYPES ──
-type TaskStatus = 'todo' | 'inprogress' | 'waiting' | 'done'
+type TaskStatus = 'todo' | 'done'
 type Msg = { role: 'user' | 'assistant'; content: string; ts: string; tasks?: Task[]; dates?: CalDate[] }
 type Task = { text: string; proj: string; deadline?: string; who: string }
 type CalDate = { d: string; t: string; proj: string; type: 'deadline' | 'rdv' | 'newsletter' | 'task' }
@@ -25,10 +25,8 @@ const PROJ: Record<string,{color:string;bg:string;border:string}> = {
 }
 
 const STATUS_CONFIG: Record<TaskStatus,{label:string;color:string;bg:string;border:string}> = {
-  todo:       { label: 'À faire',    color: TEXT3,    bg: GREY,     border: BORDER },
-  inprogress: { label: 'En cours',   color: '#E65100', bg: '#FFF3E0', border: '#FFCC80' },
-  waiting:    { label: 'En attente', color: BLUE,     bg: BLUE_BG,  border: BLUE_BORDER },
-  done:       { label: 'Terminé',    color: '#2E7D32', bg: '#E8F5E9', border: '#A5D6A7' },
+  todo: { label: 'À faire', color: TEXT3, bg: GREY, border: BORDER },
+  done: { label: 'Terminé', color: '#2E7D32', bg: '#E8F5E9', border: '#A5D6A7' },
 }
 
 const EX: Record<EId,{name:string;title:string;color:string;bg:string;initials:string}> = {
@@ -146,7 +144,7 @@ export default function MZHub() {
       if(!s)return[]
       const parsed=JSON.parse(s)
       // Migrate old format: done boolean -> status string
-      return parsed.map((t: KTask & {done?: boolean})=>({...t, status: t.status||(t.done?'done':'todo')}))
+      return parsed.map((t: KTask & {done?: boolean})=>({...t, status: (t.status==='done'||t.done)?'done':'todo'}))
     }catch{return[]}
   })
   const [cal,setCal]=useState<CalDate[]>(()=>{
@@ -212,8 +210,7 @@ export default function MZHub() {
   const startEditCal=(idx:number,item:CalDate)=>{setEditCalIdx(idx);setEditCalText(item.t);setEditCalDate(item.d)}
   const saveEditCal=()=>{if(!editCalText.trim())return;setCal(p=>p.map((item,i)=>i===editCalIdx?{...item,t:editCalText,d:editCalDate}:item));setEditCalIdx(null);setEditCalText('')}
   const cycleStatus=(id:string)=>{
-    const order:TaskStatus[]=['todo','inprogress','waiting','done']
-    setTasks(p=>p.map(t=>t.id===id?{...t,status:order[(order.indexOf(t.status)+1)%order.length]}:t))
+    setTasks(p=>p.map(t=>t.id===id?{...t,status:t.status==='done'?'todo':'done'}:t))
   }
 
   const addTask=()=>{
@@ -893,8 +890,62 @@ export default function MZHub() {
                   ))}
                 </div>
 
-                {/* Kanban columns */}
-                <div style={C({display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12})}>
+                {/* 2-column: À faire / Terminé */}
+                <div style={C({display:'grid',gridTemplateColumns:'1fr 1fr',gap:12})}>
+                  {(['todo','done'] as TaskStatus[]).map(status=>{
+                    const sc=getSC(status)
+                    const statusTasks=tasks.filter(t=>t.status===status&&(!ap||t.proj===ap))
+                    return (
+                      <div key={status} style={C({background:WHITE,border:'1px solid '+BORDER,borderRadius:3,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'})}>
+                        <div style={C({padding:'8px 12px',background:sc.bg,borderBottom:'1px solid '+sc.border,borderTop:'2px solid '+(status==='done'?'#2E7D32':RED),display:'flex',alignItems:'center',gap:6})}>
+                          <span style={C({fontSize:11,fontWeight:600,color:sc.color,flex:1,fontFamily:FE,letterSpacing:'0.04em',textTransform:'uppercase'})}>{sc.label}</span>
+                          <span style={C({fontSize:11,color:sc.color,fontWeight:600})}>{statusTasks.length}</span>
+                        </div>
+                        <div style={C({padding:'8px',maxHeight:600,overflowY:'auto'})}>
+                          {statusTasks.map(t=>{
+                            const pc=PROJ[t.proj]||PROJ['MZ Real Estate']
+                            return (
+                              <div key={t.id} style={C({background:'#FAFAFA',border:'1px solid '+BORDER,borderRadius:3,marginBottom:8,overflow:'hidden',opacity:t.status==='done'?0.65:1})}>
+                                <div style={C({padding:'8px 10px'})}>
+                                  <div style={C({display:'flex',alignItems:'flex-start',gap:8,marginBottom:5})}>
+                                    <div onClick={()=>cycleStatus(t.id)} style={C({width:16,height:16,borderRadius:3,border:'1.5px solid '+(t.status==='done'?'#2E7D32':BORDER),background:t.status==='done'?'#2E7D32':'transparent',flexShrink:0,marginTop:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:WHITE,cursor:'pointer',fontWeight:700})}>{t.status==='done'?'\u2713':''}</div>
+                                    {editTaskId===t.id?(
+                                      <div style={C({display:'flex',gap:4,flex:1})}>
+                                        <input value={editTaskText} onChange={e=>setEditTaskText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEditTask()} autoFocus style={C({flex:1,padding:'3px 6px',fontSize:12,fontFamily:F,border:'1px solid '+RED,borderRadius:3,color:TEXT,outline:'none'})}/>
+                                        <button onClick={saveEditTask} style={C({padding:'3px 6px',fontSize:10,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer'})}>OK</button>
+                                        <button onClick={()=>setEditTaskId(null)} style={C({padding:'3px 5px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3})}>\u2715</button>
+                                      </div>
+                                    ):(
+                                      <div onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({fontSize:12,color:TEXT,lineHeight:1.4,fontFamily:F,cursor:'pointer',flex:1,textDecoration:t.status==='done'?'line-through':'none'})}>{t.text}</div>
+                                    )}
+                                  </div>
+                                  <div style={C({display:'flex',gap:4,flexWrap:'wrap',alignItems:'center',paddingLeft:24})}>
+                                    <span style={C({fontSize:9,color:pc.color,background:pc.bg,padding:'1px 5px',borderRadius:3,border:'1px solid '+pc.border,fontFamily:F})}>{t.proj}</span>
+                                    {t.deadline&&<span style={C({fontSize:9,color:t.status==='done'?TEXT3:RED,fontWeight:600})}>\u26a1 {fd(t.deadline)}</span>}
+                                    {t.source&&<span style={C({fontSize:9,color:TEXT3,fontFamily:F})}>via {t.source?.split(':')[0]}</span>}
+                                    {taskNotes[t.id]&&<span style={C({fontSize:9,color:BLUE})}>\ud83d\udcdd</span>}
+                                    <div style={C({marginLeft:'auto',display:'flex',gap:3})}>
+                                      <button onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({padding:'2px 4px',fontSize:9,background:expandedTaskId===t.id?BLUE_BG:'none',border:'1px solid '+(expandedTaskId===t.id?BLUE_BORDER:BORDER),borderRadius:2,cursor:'pointer',color:expandedTaskId===t.id?BLUE:TEXT3})}>\ud83d\udcdd</button>
+                                      <button onClick={()=>startEditTask(t)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3})}>\u270e</button>
+                                      <button onClick={()=>deleteTask(t.id)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:RED})}>\u2715</button>
+                                    </div>
+                                  </div>
+                                </div>
+                                {expandedTaskId===t.id&&(
+                                  <div style={C({padding:'8px 10px',borderTop:'1px solid '+BLUE_BORDER,background:BLUE_BG})}>
+                                    <div style={C({fontSize:9,fontWeight:600,color:BLUE,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4,fontFamily:F})}>Notes & références</div>
+                                    <textarea value={taskNotes[t.id]||''} onChange={e=>saveNote(t.id,e.target.value)} placeholder={'Notes, refs...\nEx: MZCA6408, MZIB0076'} style={C({width:'100%',minHeight:64,padding:'5px 7px',fontSize:11,fontFamily:F,border:'1px solid '+BORDER,borderRadius:3,color:TEXT,outline:'none',resize:'vertical',lineHeight:1.5,boxSizing:'border-box' as const,background:WHITE})}/>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                          {statusTasks.length===0&&<div style={C({fontSize:12,color:TEXT3,textAlign:'center',padding:'24px 0',fontFamily:F})}>—</div>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
                   {(Object.keys(STATUS_CONFIG) as TaskStatus[]).map(status=>{
                     const sc=getSC(status)
                     const statusTasks=tasks.filter(t=>t.status===status&&(!ap||t.proj===ap))
