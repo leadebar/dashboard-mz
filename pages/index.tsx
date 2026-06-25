@@ -908,12 +908,12 @@ export default function MZHub() {
                               <div key={t.id} style={C({background:'#FAFAFA',border:'1px solid '+BORDER,borderRadius:3,marginBottom:8,overflow:'hidden',opacity:t.status==='done'?0.65:1})}>
                                 <div style={C({padding:'8px 10px'})}>
                                   <div style={C({display:'flex',alignItems:'flex-start',gap:8,marginBottom:5})}>
-                                    <div onClick={()=>cycleStatus(t.id)} style={C({width:16,height:16,borderRadius:3,border:'1.5px solid '+(t.status==='done'?'#2E7D32':BORDER),background:t.status==='done'?'#2E7D32':'transparent',flexShrink:0,marginTop:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:WHITE,cursor:'pointer',fontWeight:700})}>{t.status==='done'?'\u2713':''}</div>
+                                    <div onClick={()=>cycleStatus(t.id)} style={C({width:16,height:16,borderRadius:3,border:'1.5px solid '+(t.status==='done'?'#2E7D32':BORDER),background:t.status==='done'?'#2E7D32':'transparent',flexShrink:0,marginTop:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:WHITE,cursor:'pointer',fontWeight:700})}>{t.status==='done'?'✓':''}</div>
                                     {editTaskId===t.id?(
                                       <div style={C({display:'flex',gap:4,flex:1})}>
                                         <input value={editTaskText} onChange={e=>setEditTaskText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEditTask()} autoFocus style={C({flex:1,padding:'3px 6px',fontSize:12,fontFamily:F,border:'1px solid '+RED,borderRadius:3,color:TEXT,outline:'none'})}/>
                                         <button onClick={saveEditTask} style={C({padding:'3px 6px',fontSize:10,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer'})}>OK</button>
-                                        <button onClick={()=>setEditTaskId(null)} style={C({padding:'3px 5px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3})}>\u2715</button>
+                                        <button onClick={()=>setEditTaskId(null)} style={C({padding:'3px 5px',fontSize:10,background:'none',border:'1px solid '+BORDER,borderRadius:3,cursor:'pointer',color:TEXT3})}>✕</button>
                                       </div>
                                     ):(
                                       <div onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({fontSize:12,color:TEXT,lineHeight:1.4,fontFamily:F,cursor:'pointer',flex:1,textDecoration:t.status==='done'?'line-through':'none'})}>{t.text}</div>
@@ -921,13 +921,13 @@ export default function MZHub() {
                                   </div>
                                   <div style={C({display:'flex',gap:4,flexWrap:'wrap',alignItems:'center',paddingLeft:24})}>
                                     <span style={C({fontSize:9,color:pc.color,background:pc.bg,padding:'1px 5px',borderRadius:3,border:'1px solid '+pc.border,fontFamily:F})}>{t.proj}</span>
-                                    {t.deadline&&<span style={C({fontSize:9,color:t.status==='done'?TEXT3:RED,fontWeight:600})}>\u26a1 {fd(t.deadline)}</span>}
-                                    {t.source&&<span style={C({fontSize:9,color:TEXT3,fontFamily:F})}>via {t.source?.split(':')[0]}</span>}
-                                    {taskNotes[t.id]&&<span style={C({fontSize:9,color:BLUE})}>\ud83d\udcdd</span>}
+                                    {t.deadline&&<span style={C({fontSize:9,color:t.status==='done'?TEXT3:RED,fontWeight:600})}>⚡ {fd(t.deadline)}</span>}
+                                    
+                                    {taskNotes[t.id]&&<span style={C({fontSize:9,color:BLUE})}>📝</span>}
                                     <div style={C({marginLeft:'auto',display:'flex',gap:3})}>
-                                      <button onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({padding:'2px 4px',fontSize:9,background:expandedTaskId===t.id?BLUE_BG:'none',border:'1px solid '+(expandedTaskId===t.id?BLUE_BORDER:BORDER),borderRadius:2,cursor:'pointer',color:expandedTaskId===t.id?BLUE:TEXT3})}>\ud83d\udcdd</button>
-                                      <button onClick={()=>startEditTask(t)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3})}>\u270e</button>
-                                      <button onClick={()=>deleteTask(t.id)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:RED})}>\u2715</button>
+                                      <button onClick={()=>setExpandedTaskId(expandedTaskId===t.id?null:t.id)} style={C({padding:'2px 4px',fontSize:9,background:expandedTaskId===t.id?BLUE_BG:'none',border:'1px solid '+(expandedTaskId===t.id?BLUE_BORDER:BORDER),borderRadius:2,cursor:'pointer',color:expandedTaskId===t.id?BLUE:TEXT3})}>📝</button>
+                                      <button onClick={()=>startEditTask(t)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:TEXT3})}>✎</button>
+                                      <button onClick={()=>deleteTask(t.id)} style={C({padding:'2px 4px',fontSize:9,background:'none',border:'1px solid '+BORDER,borderRadius:2,cursor:'pointer',color:RED})}>✕</button>
                                     </div>
                                   </div>
                                 </div>
@@ -974,7 +974,7 @@ export default function MZHub() {
                                   <div style={C({display:'flex',gap:4,flexWrap:'wrap',alignItems:'center'})}>
                                     <span style={C({fontSize:9,color:pc.color,background:pc.bg,padding:'1px 5px',borderRadius:3,border:'1px solid '+pc.border,fontFamily:F})}>{t.proj}</span>
                                     {t.deadline&&<span style={C({fontSize:9,color:RED,fontWeight:600})}>⚡ {fd(t.deadline)}</span>}
-                                    {t.source&&<span style={C({fontSize:9,color:TEXT3,fontFamily:F})}>via {t.source?.split(':')[0]}</span>}
+                                    
                                     {taskNotes[t.id]&&<span style={C({fontSize:9,color:BLUE})}>📝</span>}
                                     <div style={C({marginLeft:'auto',display:'flex',gap:3})}>
                                       <button onClick={()=>cycleStatus(t.id)} title="Changer le statut" style={C({padding:'2px 5px',fontSize:9,background:sc.bg,border:'1px solid '+sc.border,borderRadius:2,cursor:'pointer',color:sc.color,fontFamily:F})}>→</button>
