@@ -197,12 +197,7 @@ export default function MZHub() {
   const today=new Date().toISOString().split('T')[0]
   const week=getWeek(woff)
 
-  // Deadlines warning — tasks due in <= 48h
-  const urgentTasks = tasks.filter(t=>{
-    if(t.status==='done'||!t.deadline) return false
-    const diff=(new Date(t.deadline).getTime()-Date.now())/(1000*60*60)
-    return diff<=48&&diff>=-24
-  })
+  const todayTasks = tasks.filter(t=>t.status!=='done'&&t.deadline===today)
 
   const addFromResponse=useCallback((tks:Task[],dts:CalDate[],src?:string)=>{
     if(tks.length>0){const n=Date.now();setTasks(p=>[...p,...tks.map((t,i)=>({id:'a_'+n+'_'+i,text:t.text,proj:t.proj||'MZ Real Estate',deadline:t.deadline,status:'todo' as TaskStatus,source:src}))])}
@@ -480,11 +475,7 @@ export default function MZHub() {
               {ae?EX[ae].name+' — '+EX[ae].title:view==='dashboard'?"Vue d'ensemble":view==='email'?'Email → Taylor (Agenda)':view==='chat'?'Mon équipe':view==='todo'?'Tâches & Projets':'Calendrier MZ'}
             </div>
             <div style={C({fontSize:11,color:TEXT3,fontVariantNumeric:'tabular-nums'})}>{time}</div>
-            {urgentTasks.length>0&&(
-              <div onClick={()=>setView('todo')} style={C({display:'flex',alignItems:'center',gap:6,padding:'4px 10px',background:'#FFEBEE',border:'1px solid #EF9A9A',borderRadius:3,cursor:'pointer'})}>
-                <span style={C({fontSize:11,color:RED,fontWeight:600})}>⚡ {urgentTasks.length} deadline{urgentTasks.length>1?'s':''} urgente{urgentTasks.length>1?'s':''}</span>
-              </div>
-            )}
+
             {ae&&<button onClick={()=>setHist(h=>({...h,[ae]:[]}))} style={C({padding:'4px 10px',fontSize:11,background:'none',border:'1px solid '+BORDER,borderRadius:3,color:TEXT3,cursor:'pointer',fontFamily:F})}>Effacer</button>}
             <button onClick={()=>{setView('chat');setAe(null)}} style={C({padding:'6px 16px',fontSize:11,fontWeight:500,background:RED,color:WHITE,border:'none',borderRadius:3,cursor:'pointer',fontFamily:FE,letterSpacing:'0.08em',textTransform:'uppercase'})}>+ Brief équipe</button>
           </div>
@@ -499,33 +490,62 @@ export default function MZHub() {
                   <div style={C({fontFamily:FE,fontSize:22,color:DARK,letterSpacing:'0.04em',textTransform:'uppercase'})}>Bonjour, <span style={C({color:RED})}>Léa</span></div>
                 </div>
 
-                {/* Urgent banner */}
-                {urgentTasks.length>0&&(
-                  <div style={C({marginBottom:14,padding:'10px 16px',background:'#FFEBEE',border:'1px solid #EF9A9A',borderLeft:'3px solid '+RED,borderRadius:3,display:'flex',alignItems:'center',gap:12})}>
-                    <span style={C({fontSize:16})}>⚡</span>
-                    <div style={C({flex:1})}>
-                      <div style={C({fontSize:12,fontWeight:600,color:RED,fontFamily:FE,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4})}>Deadlines urgentes (48h)</div>
-                      {urgentTasks.map(t=>(
-                        <div key={t.id} style={C({fontSize:12,color:TEXT,fontFamily:F})}>{t.text} — <span style={C({color:RED,fontWeight:600})}>{t.deadline?fd(t.deadline):''}</span></div>
-                      ))}
+
+
+                {/* Today tasks + mini week calendar */}
+                <div style={C({display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:16})}>
+                  {/* Tâches du jour */}
+                  <div style={C({background:WHITE,border:'1px solid '+BORDER,borderRadius:3,padding:'14px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)',borderTop:'2px solid '+RED})}>
+                    <div style={C({display:'flex',alignItems:'center',marginBottom:10})}>
+                      <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',flex:1,fontFamily:F})}>Tâches du jour · {new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}</div>
+                      <span style={C({fontSize:11,color:todayTasks.length>0?RED:TEXT3,fontWeight:600,fontFamily:F})}>{todayTasks.length} tâche{todayTasks.length!==1?'s':''}</span>
+                    </div>
+                    {todayTasks.length===0 ? (
+                      <div style={C({fontSize:13,color:TEXT3,textAlign:'center',padding:'20px 0',fontFamily:F})}>Aucune deadline aujourd&apos;hui 🎉</div>
+                    ) : todayTasks.map(t=>{
+                      const sc=getSC(t.status)
+                      const pc=PROJ[t.proj]||PROJ['MZ Real Estate']
+                      return (
+                        <div key={t.id} style={C({display:'flex',alignItems:'flex-start',gap:8,padding:'7px 0',borderBottom:'1px solid '+GREY2})}>
+                          <div style={C({width:4,height:'100%',minHeight:16,background:RED,borderRadius:2,flexShrink:0,marginTop:3})}></div>
+                          <div style={C({flex:1})}>
+                            <div style={C({fontSize:12,color:TEXT,lineHeight:1.4,fontFamily:F})}>{t.text}</div>
+                            <div style={C({display:'flex',gap:6,marginTop:2})}>
+                              <span style={C({fontSize:9,color:sc.color,background:sc.bg,padding:'1px 5px',borderRadius:3,border:'1px solid '+sc.border,fontFamily:F,cursor:'pointer'})} onClick={()=>cycleStatus(t.id)}>{sc.label}</span>
+                              <span style={C({fontSize:9,color:pc.color,fontFamily:F})}>{t.proj}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Mini calendrier semaine */}
+                  <div style={C({background:WHITE,border:'1px solid '+BORDER,borderRadius:3,padding:'14px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)',borderTop:'2px solid '+RED})}>
+                    <div style={C({display:'flex',alignItems:'center',marginBottom:10})}>
+                      <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',flex:1,fontFamily:F})}>Cette semaine</div>
+                      <button onClick={()=>setView('calendrier')} style={C({fontSize:10,color:RED,background:'none',border:'none',cursor:'pointer',fontFamily:F})}>Voir tout →</button>
+                    </div>
+                    <div style={C({display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3})}>
+                      {['L','M','M','J','V','S','D'].map((d,i)=><div key={i} style={C({fontSize:8,fontWeight:600,color:TEXT3,textAlign:'center',fontFamily:F,paddingBottom:3})}>{d}</div>)}
+                      {getWeek(0).map((date,i)=>{
+                        const dStr=date.toISOString().split('T')[0]
+                        const isT=dStr===today
+                        const dayItems=cal.filter(c=>c.d===dStr)
+                        const dayTasks=tasks.filter(t=>t.deadline===dStr&&t.status!=='done')
+                        return (
+                          <div key={i} onClick={()=>setView('calendrier')} style={C({background:isT?'#FFF0F2':GREY,border:'1px solid '+(isT?RED:BORDER),borderRadius:3,padding:'4px 3px',minHeight:52,cursor:'pointer'})}>
+                            <div style={C({fontSize:11,fontWeight:isT?700:400,color:isT?RED:DARK,textAlign:'center',fontFamily:FE,marginBottom:3})}>{date.getDate()}</div>
+                            {dayItems.slice(0,2).map((item,j)=>{
+                              const t=tc(item.type)
+                              return <div key={j} style={C({fontSize:8,padding:'1px 3px',borderRadius:2,marginBottom:1,background:t.bg,color:t.color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',lineHeight:1.4})}>{item.t}</div>
+                            })}
+                            {dayTasks.length>0&&<div style={C({fontSize:8,padding:'1px 3px',borderRadius:2,background:'#FFEBEE',color:RED,fontWeight:600})}>⚡{dayTasks.length}</div>}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
-                )}
-
-                {/* Stats */}
-                <div style={C({display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16})}>
-                  {[
-                    {l:'À faire',v:String(tasks.filter(t=>t.status==='todo').length),s:'tâches',color:TEXT3},
-                    {l:'En cours',v:String(tasks.filter(t=>t.status==='inprogress').length),s:'tâches',color:'#E65100'},
-                    {l:'En attente',v:String(tasks.filter(t=>t.status==='waiting').length),s:'tâches',color:BLUE},
-                    {l:'Terminées',v:String(tasks.filter(t=>t.status==='done').length),s:'tâches',color:'#2E7D32'},
-                  ].map(card=>(
-                    <div key={card.l} style={C({background:WHITE,border:'1px solid '+BORDER,borderRadius:3,padding:'14px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)',borderTop:'2px solid '+card.color})}>
-                      <div style={C({fontSize:9,fontWeight:600,color:TEXT3,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,fontFamily:F})}>{card.l}</div>
-                      <div style={C({fontFamily:FE,fontSize:26,color:card.color,lineHeight:1,marginBottom:2})}>{card.v}</div>
-                      <div style={C({fontSize:11,color:TEXT3,fontFamily:F})}>{card.s}</div>
-                    </div>
-                  ))}
                 </div>
 
                 {/* Email rapide + Équipe */}
