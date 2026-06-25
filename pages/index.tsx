@@ -1001,7 +1001,6 @@ export default function MZHub() {
                     )
                   })}
                 </div>
-              </div>
             )}
 
             {/* CALENDRIER 4 SEMAINES */}
@@ -1086,7 +1085,6 @@ export default function MZHub() {
               </div>
             )}
 
-          </div>
         </main>
       </div>
     </>
